@@ -4,6 +4,7 @@
 __pycache__/
 
 project/
+*_patch/
 
 # これは最後に書かないとダメ。
 !.gitkeep
