@@ -13,14 +13,15 @@ project/html/html1.html
 project/html/html2.html
 
 '''
-patchname_format = '{date}_patch'
-
 
 import os
 import sys
 from pprint import pprint
 import datetime
 import shutil
+
+
+PATCHNAME = datetime.datetime.today().strftime('%Y%m%d_%H%M%S') + '_patch'
 
 
 class PatchMaker:
@@ -37,9 +38,9 @@ class PatchMaker:
     def run(self, targetpaths):
         '''トップレベルメソッド。'''
         # リストで渡しても文字列で渡してもいいようにしました。
-        pathlist = targetpaths if isinstance(targetpaths, list) else self.make_pathlist(targetpaths)
-        absentpaths = self.get_absent_paths(pathlist)
-        donelist = self.create_patch(list(set(pathlist)-set(absentpaths)))
+        targetpaths = targetpaths if isinstance(targetpaths, list) else self.make_pathlist(targetpaths)
+        absentpaths = self.get_absent_paths(targetpaths)
+        donelist = self.create_patch(list(set(targetpaths)-set(absentpaths)))
         self.output_result(donelist, absentpaths)
 
     def make_pathlist(self, targetpaths: str) -> list:
@@ -52,27 +53,20 @@ class PatchMaker:
 
     def get_absent_paths(self, pathlist: list) -> list:
         '''インプットされたパスのうち、存在しないものを返します。'''
-        _ = []
-        push = _.append
-        for path in pathlist:
-            if not os.path.exists(path):
-                push(path)
-        return _
+        return [path for path in pathlist if not os.path.exists(path)]
 
     def create_patch(self, pathlist: list) -> list:
         '''目的であるパッチの作成。'''
-        patchfolder = patchname_format.replace(
-            '{date}', datetime.datetime.today().strftime('%Y%m%d_%H%M%S'))
-        os.mkdir(patchfolder)
+        os.mkdir(PATCHNAME)
         donelist = []
         push = donelist.append
         for path in pathlist:
-            if not os.path.exists(patchfolder + '/' + os.path.dirname(path)):
-                os.makedirs(patchfolder + '/' + os.path.dirname(path))
+            if not os.path.exists(PATCHNAME + '/' + os.path.dirname(path)):
+                os.makedirs(PATCHNAME + '/' + os.path.dirname(path))
             if os.path.isdir(path):
-                push(shutil.copytree(path, patchfolder + '/' + path))
+                push(shutil.copytree(path, PATCHNAME + '/' + path))
             else:
-                push(shutil.copy(path, patchfolder + '/' + path))
+                push(shutil.copy(path, PATCHNAME + '/' + path))
         return donelist
 
     def output_result(self, donelist, absentpaths):
