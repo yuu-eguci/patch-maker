@@ -36,7 +36,8 @@ class PatchMaker:
 
     def run(self, targetpaths):
         '''トップレベルメソッド。'''
-        pathlist = self.make_pathlist(targetpaths)
+        # リストで渡しても文字列で渡してもいいようにしました。
+        pathlist = targetpaths if isinstance(targetpaths, list) else self.make_pathlist(targetpaths)
         absentpaths = self.get_absent_paths(pathlist)
         donelist = self.create_patch(list(set(pathlist)-set(absentpaths)))
         self.output_result(donelist, absentpaths)
@@ -68,7 +69,10 @@ class PatchMaker:
         for path in pathlist:
             if not os.path.exists(patchfolder + '/' + os.path.dirname(path)):
                 os.makedirs(patchfolder + '/' + os.path.dirname(path))
-            push(shutil.copy(path, patchfolder + '/' + path))
+            if os.path.isdir(path):
+                push(shutil.copytree(path, patchfolder + '/' + path))
+            else:
+                push(shutil.copy(path, patchfolder + '/' + path))
         return donelist
 
     def output_result(self, donelist, absentpaths):
