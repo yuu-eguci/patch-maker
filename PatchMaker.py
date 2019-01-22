@@ -25,7 +25,7 @@ import shutil
 
 class PatchMaker:
     def __init__(self):
-        self.cd_()
+        pass
 
     def cd_(self):
         '''カレントディレクトリを移す。'''
@@ -34,7 +34,7 @@ class PatchMaker:
         else:
             os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    def run(self):
+    def run(self, targetpaths):
         '''トップレベルメソッド。'''
         pathlist = self.make_pathlist(targetpaths)
         absentpaths = self.get_absent_paths(pathlist)
@@ -80,4 +80,5 @@ class PatchMaker:
 
 if __name__ == '__main__':
     pm = PatchMaker()
-    pm.run()
+    pm.cd_()
+    pm.run(targetpaths)
