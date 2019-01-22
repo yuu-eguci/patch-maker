@@ -59,14 +59,15 @@ class PatchMaker:
         '''目的であるパッチの作成。'''
         os.mkdir(PATCHNAME)
         donelist = []
-        push = donelist.append
         for path in pathlist:
-            if not os.path.exists(PATCHNAME + '/' + os.path.dirname(path)):
-                os.makedirs(PATCHNAME + '/' + os.path.dirname(path))
-            if os.path.isdir(path):
-                push(shutil.copytree(path, PATCHNAME + '/' + path))
-            else:
-                push(shutil.copy(path, PATCHNAME + '/' + path))
+            dest_dir = f'{PATCHNAME}/{os.path.dirname(path)}'
+            dest_file = f'{PATCHNAME}/{path}'
+            if not os.path.exists(dest_dir):
+                os.makedirs(dest_dir)
+            donelist.append(
+                shutil.copytree(path, dest_file) 
+                if os.path.isdir(path)
+                else shutil.copy(path, dest_file))
         return donelist
 
     def output_result(self, donelist, absentpaths):
