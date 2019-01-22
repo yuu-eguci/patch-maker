@@ -13,8 +13,6 @@ project/html/html1.html
 project/html/html2.html
 
 '''
-patchname_format = '{date}_patch'
-
 
 import os
 import sys
@@ -23,9 +21,12 @@ import datetime
 import shutil
 
 
+PATCHNAME = datetime.datetime.today().strftime('%Y%m%d_%H%M%S') + '_patch'
+
+
 class PatchMaker:
     def __init__(self):
-        self.cd_()
+        pass
 
     def cd_(self):
         '''カレントディレクトリを移す。'''
@@ -34,11 +35,12 @@ class PatchMaker:
         else:
             os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    def run(self):
+    def run(self, targetpaths):
         '''トップレベルメソッド。'''
-        pathlist = self.make_pathlist(targetpaths)
-        absentpaths = self.get_absent_paths(pathlist)
-        donelist = self.create_patch(list(set(pathlist)-set(absentpaths)))
+        # リストで渡しても文字列で渡してもいいようにしました。
+        targetpaths = targetpaths if isinstance(targetpaths, list) else self.make_pathlist(targetpaths)
+        absentpaths = self.get_absent_paths(targetpaths)
+        donelist = self.create_patch(list(set(targetpaths)-set(absentpaths)))
         self.output_result(donelist, absentpaths)
 
     def make_pathlist(self, targetpaths: str) -> list:
@@ -51,24 +53,21 @@ class PatchMaker:
 
     def get_absent_paths(self, pathlist: list) -> list:
         '''インプットされたパスのうち、存在しないものを返します。'''
-        _ = []
-        push = _.append
-        for path in pathlist:
-            if not os.path.exists(path):
-                push(path)
-        return _
+        return [path for path in pathlist if not os.path.exists(path)]
 
     def create_patch(self, pathlist: list) -> list:
         '''目的であるパッチの作成。'''
-        patchfolder = patchname_format.replace(
-            '{date}', datetime.datetime.today().strftime('%Y%m%d_%H%M%S'))
-        os.mkdir(patchfolder)
+        os.mkdir(PATCHNAME)
         donelist = []
-        push = donelist.append
         for path in pathlist:
-            if not os.path.exists(patchfolder + '/' + os.path.dirname(path)):
-                os.makedirs(patchfolder + '/' + os.path.dirname(path))
-            push(shutil.copy(path, patchfolder + '/' + path))
+            dest_dir = f'{PATCHNAME}/{os.path.dirname(path)}'
+            dest_file = f'{PATCHNAME}/{path}'
+            if not os.path.exists(dest_dir):
+                os.makedirs(dest_dir)
+            donelist.append(
+                shutil.copytree(path, dest_file) 
+                if os.path.isdir(path)
+                else shutil.copy(path, dest_file))
         return donelist
 
     def output_result(self, donelist, absentpaths):
@@ -80,4 +79,5 @@ class PatchMaker:
 
 if __name__ == '__main__':
     pm = PatchMaker()
-    pm.run()
+    pm.cd_()
+    pm.run(targetpaths)
