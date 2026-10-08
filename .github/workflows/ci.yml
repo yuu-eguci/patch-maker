@@ -36,3 +36,10 @@ jobs:
           persist-credentials: false
       - run: docker build -t patch-maker .
       - run: docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pytest -q'
+      - name: Run README quick start
+        run: |
+          mkdir -p project/html && echo one > project/html/html1.html && echo two > project/html/html2.html
+          docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker
+          test "$(cat ./*_patch/project/html/html1.html)" = one
+          test "$(cat ./*_patch/project/html/html2.html)" = two
+          test "$(stat -c %u ./*_patch)" = "$(id -u)"

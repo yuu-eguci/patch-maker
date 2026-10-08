@@ -120,6 +120,6 @@ docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pyte
 - `requirements-dev.in` に直接使うライブラリを書き、 `requirements-dev.txt` に間接依存を含むバージョンとハッシュを pip-compile で生成しています。 `requirements-dev.in` を変えたら `pip-compile --generate-hashes --strip-extras --output-file requirements-dev.txt requirements-dev.in` で再生成します。
 - Docker のベースイメージは `Dockerfile` のダイジェストで、 GitHub Actions の actions はコミット SHA で固定しています。
 
-GitHub Actions の CI (`.github/workflows/ci.yml`) でも同じ lint とテストを、 Python 3.13 と 3.14 で実行します。
+GitHub Actions の CI (`.github/workflows/ci.yml`) でも同じ lint とテストを、 Python 3.13 と 3.14 で実行します。 Docker のジョブでは「すぐ試す」の手順も実行し、パッチの中身と所有者を確認します。
 
 作業記録は [docs/iona-kest.md](docs/iona-kest.md) にあります。
