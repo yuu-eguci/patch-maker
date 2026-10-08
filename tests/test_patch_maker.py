@@ -436,10 +436,37 @@ def test_run_reports_partial_patch_that_could_not_be_removed(workdir, capsys, mo
         raise PermissionError(13, 'Permission denied', src)
 
     monkeypatch.setattr(PatchMaker.shutil, 'copy', fail)
-    monkeypatch.setattr(PatchMaker.shutil, 'rmtree', lambda path, ignore_errors: None)
+    monkeypatch.setattr(PatchMaker.shutil, 'rmtree', lambda path, onexc: None)
 
     assert PatchMaker.PatchMaker().run(['a.txt']) == 1
 
     err = capsys.readouterr().err
     assert 'The partial patch directory remains: test_patch' in err
     assert 'was not created' not in err
+
+
+@pytest.mark.skipif(os.name != 'posix' or os.geteuid() == 0, reason='root ignores permissions')
+def test_run_removes_partial_patch_with_read_only_copies(workdir, monkeypatch):
+    write(workdir / 'ro/f.txt')
+    write(workdir / 'z.txt')
+    (workdir / 'ro').chmod(0o555)
+    monkeypatch.setattr(PatchMaker.shutil, 'copy', lambda src, dst: (_ for _ in ()).throw(PermissionError(13, 'x')))
+
+    try:
+        assert PatchMaker.PatchMaker().run(['ro', 'z.txt']) == 1
+        assert not (workdir / 'test_patch').exists()
+    finally:
+        (workdir / 'ro').chmod(0o755)
+        if (workdir / 'test_patch/ro').exists():
+            (workdir / 'test_patch/ro').chmod(0o755)
+
+
+def test_retry_with_write_permission_does_not_chmod_outside_patch(workdir):
+    (workdir / 'test_patch').mkdir()
+    workdir.chmod(0o755)
+    pm = PatchMaker.PatchMaker()
+    pm.patchdir = 'test_patch'
+
+    pm.retry_with_write_permission(lambda path: None, 'test_patch', None)
+
+    assert workdir.stat().st_mode & 0o777 == 0o755

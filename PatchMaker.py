@@ -11,10 +11,12 @@ project/html/html2.html
 """
 
 import ast
+import contextlib
 import datetime
 import os
 import re
 import shutil
+import stat
 import sys
 from pathlib import PurePath
 from pprint import pprint
@@ -109,9 +111,17 @@ class PatchMaker:
                     else shutil.copy(path, dest)
                 )
         except OSError:
-            shutil.rmtree(self.patchdir, ignore_errors=True)
+            with contextlib.suppress(OSError):
+                shutil.rmtree(self.patchdir, onexc=self.retry_with_write_permission)
             raise
         return donelist
+
+    def retry_with_write_permission(self, func, path, _):
+        """rmtree が権限で失敗したとき、パッチ内の対象と親ディレクトリへ書き込み権限を付けて 1 回だけ再実行します。"""
+        for target in (os.path.dirname(path), path):
+            if os.path.commonpath([self.patchdir, target]) == self.patchdir:
+                os.chmod(target, stat.S_IRWXU)
+        func(path)
 
     def ignore_unsafe_links(self, src: str, names: list) -> list:
         """copytree 中に、壊れたリンク、外側を指すリンク、コピー済みのディレクトリや祖先を指すリンクを除外します。"""
