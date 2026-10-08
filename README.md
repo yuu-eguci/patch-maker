@@ -39,7 +39,7 @@ docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch
 
 ```text
 ['../secret.txt']
-<INFO> 1 paths above were rejected because they are not inside this directory.
+<INFO> 1 paths above were rejected (rooted, .git or outside this directory).
 ['missing.txt']
 <INFO> 1 files above were not found and were ignored.
 <INFO> Succeeded! 1 patch files were created. They are not shown on console.
@@ -68,6 +68,8 @@ docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch
 - シンボリックリンクはリンク先の内容をコピーします。ただし次のリンクは対象外です。
     - 指定したパス自体やその途中のディレクトリがリンクで、実体がこのディレクトリの外にある場合は拒否します。
     - コピーするディレクトリの中にあり、リンク先が存在しない、このディレクトリの外、コピー中のディレクトリの祖先 (ループ) 、または同じ指定パスの中でコピー済みのディレクトリを指すリンクはコピーせず、一覧表示します。 Windows のジャンクションも同じ扱いです。
+- `.git` を含むパス (`.git/config` や `sub/.git` など) は拒否します。コピーするディレクトリの中にある `.git` (サブモジュールの `.git` ファイルを含みます) はコピーせず、一覧表示します。
+- ディレクトリを指定すると、 git で管理していないファイル (`.env` など) も含めて中身をすべてコピーします。サブモジュールの更新では `git diff --name-only` がディレクトリを出力するため、配布前にパッチの中身を確認してください。
 - パスの存在確認とリンクの判定は、 `a/../b` を `b` のように正規化したパスで行います。
 - 同じパスを複数回指定しても 1 回だけコピーします。見つからないパスと拒否したパスは、表記が同じ場合だけ 1 回にまとめて報告します。
 - ディレクトリとその配下のパスを同時に指定した場合は、ディレクトリだけをコピーします。 大文字と小文字を区別しないファイルシステム (macOS や Windows の既定) で `D/f.txt` と `d` のように表記が違う場合も、エラーにせず同じディレクトリへまとめてコピーします。

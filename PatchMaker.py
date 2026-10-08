@@ -82,11 +82,12 @@ class PatchMaker:
             return line
 
     def is_unsafe_path(self, path: str) -> bool:
-        """ルートやドライブ付きのパスと、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""
+        """ルートやドライブ付き、 .git を含む、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""
         normalized = PurePath(os.path.normpath(path))
         return (
             bool(normalized.anchor)
             or normalized.parts[:1] in ((), ('..',))
+            or any(part.casefold() == '.git' for part in normalized.parts)
             or not self.is_inside_base(os.path.normpath(path))
         )
 
@@ -98,7 +99,7 @@ class PatchMaker:
         """目的であるパッチの作成。"""
         self.patchdir = None
         self.patchdir = self.make_patch_dir()
-        self.skippedlinks = []
+        self.skippedentries = []
         donelist = []
         try:
             for path in self.select_copy_targets(pathlist):
@@ -106,7 +107,7 @@ class PatchMaker:
                 dest = os.path.join(self.patchdir, path)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 donelist.append(
-                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_links, dirs_exist_ok=True)
+                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_entries, dirs_exist_ok=True)
                     if os.path.isdir(path)
                     else shutil.copy(path, dest)
                 )
@@ -123,8 +124,8 @@ class PatchMaker:
                 os.chmod(target, stat.S_IRWXU)
         func(path)
 
-    def ignore_unsafe_links(self, src: str, names: list) -> list:
-        """copytree 中に、壊れたリンク、外側を指すリンク、コピー済みのディレクトリや祖先を指すリンクを除外します。"""
+    def ignore_unsafe_entries(self, src: str, names: list) -> list:
+        """copytree 中に、 .git と、壊れたリンク、外側やコピー済みのディレクトリや祖先を指すリンクを除外します。"""
         current = src
         while current not in ('', os.curdir):
             self.visited.add(os.path.realpath(current))
@@ -132,12 +133,16 @@ class PatchMaker:
         ignored = []
         for name in names:
             path = os.path.join(src, name)
+            if name.casefold() == '.git':
+                ignored.append(name)
+                self.skippedentries.append(path)
+                continue
             if not (os.path.islink(path) or os.path.isjunction(path)):
                 continue
             real = os.path.realpath(path)
             if not os.path.exists(path) or not self.is_inside_base(path) or real in self.visited:
                 ignored.append(name)
-                self.skippedlinks.append(path)
+                self.skippedentries.append(path)
             elif os.path.isdir(path):
                 self.visited.add(real)
         return ignored
@@ -165,15 +170,15 @@ class PatchMaker:
         """コピーしなかったパスの出力。"""
         if rejectedpaths:
             pprint(rejectedpaths)
-            print(f'<INFO> {len(rejectedpaths)} paths above were rejected because they are not inside this directory.')
+            print(f'<INFO> {len(rejectedpaths)} paths above were rejected (rooted, .git or outside this directory).')
         pprint(absentpaths)
         print(f'<INFO> {len(absentpaths)} files above were not found and were ignored.')
 
     def output_result(self, donelist):
         """「終わったよー」の出力。"""
-        if self.skippedlinks:
-            pprint(self.skippedlinks)
-            print(f'<INFO> {len(self.skippedlinks)} symlinks above were skipped (broken, outside or already copied).')
+        if self.skippedentries:
+            pprint(self.skippedentries)
+            print(f'<INFO> {len(self.skippedentries)} entries above were skipped (.git or unsafe symlinks).')
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
         print(f'<INFO> Patch directory: {self.patchdir}')
 

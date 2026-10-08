@@ -276,7 +276,7 @@ def test_run_skips_links_in_directory_pointing_outside(appdir, capsys):
     assert not (appdir / 'test_patch/d/secret.txt').exists()
     assert not (appdir / 'test_patch/d/outside').exists()
     out = capsys.readouterr().out
-    assert '2 symlinks above were skipped' in out
+    assert '2 entries above were skipped' in out
 
 
 def test_run_skips_symlink_loops(appdir):
@@ -329,7 +329,7 @@ def test_run_copies_directory_reached_by_several_links_once(appdir, capsys):
 
     copied = list((appdir / 'test_patch').rglob('f.txt'))
     assert len(copied) == 1
-    assert '16 symlinks above were skipped' in capsys.readouterr().out
+    assert '16 entries above were skipped' in capsys.readouterr().out
 
 
 def test_make_pathlist_decodes_git_quoted_paths():
@@ -360,7 +360,7 @@ def test_run_skips_broken_symlinks_in_directory(appdir, capsys):
 
     assert (appdir / 'test_patch/d/keep.txt').read_text() == 'keep'
     assert not (appdir / 'test_patch/d/broken.txt').exists()
-    assert '1 symlinks above were skipped' in capsys.readouterr().out
+    assert '1 entries above were skipped' in capsys.readouterr().out
 
 
 def test_make_pathlist_keeps_git_quoted_line_that_is_not_utf8():
@@ -499,3 +499,26 @@ def test_main_reads_non_utf8_stdin_without_crashing(workdir, no_cd, monkeypatch)
     assert PatchMaker.main(['-']) == 0
 
     assert (workdir / 'test_patch' / name).read_text() == 'sjis'
+
+
+@pytest.mark.parametrize('target', ['.git/config', 'sub/.git', 'sub/.GIT/HEAD'])
+def test_run_rejects_paths_containing_git_directory(workdir, capsys, target):
+    write(workdir / target)
+
+    assert PatchMaker.PatchMaker().run([target]) == 1
+
+    assert '1 paths above were rejected' in capsys.readouterr().out
+
+
+def test_run_skips_git_entries_inside_directory(workdir, capsys):
+    write(workdir / 'vendor/lib/f.txt', 'f')
+    write(workdir / 'vendor/lib/.git', 'gitdir: ../../.git/modules/vendor/lib')
+    write(workdir / 'vendor/lib/sub/.git/config')
+
+    assert PatchMaker.PatchMaker().run(['vendor']) == 0
+
+    assert (workdir / 'test_patch/vendor/lib/f.txt').read_text() == 'f'
+    assert not (workdir / 'test_patch/vendor/lib/.git').exists()
+    assert not (workdir / 'test_patch/vendor/lib/sub/.git').exists()
+    out = capsys.readouterr().out
+    assert '2 entries above were skipped' in out
