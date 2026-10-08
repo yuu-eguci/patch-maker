@@ -590,3 +590,43 @@ def test_run_copies_locked_file_without_flags(workdir):
         os.chflags(workdir / 'locked.txt', 0)
         if (workdir / 'test_patch/locked.txt').exists():
             os.chflags(workdir / 'test_patch/locked.txt', 0)
+
+
+def test_run_drops_special_bits_of_directories(workdir):
+    write(workdir / 'd/sub/f')
+    (workdir / 'd/sub').chmod(0o3755)
+    if stat.S_IMODE((workdir / 'd/sub').stat().st_mode) != 0o3755:
+        pytest.skip('file system ignores special bits')
+
+    assert PatchMaker.PatchMaker().run(['d']) == 0
+
+    assert stat.S_IMODE((workdir / 'test_patch/d/sub').stat().st_mode) == 0o755
+
+
+@pytest.mark.skipif(not hasattr(os, 'chflags') or not hasattr(stat, 'UF_IMMUTABLE'), reason='no file flags')
+@pytest.mark.parametrize('fail', [False, True])
+def test_run_handles_locked_directory(workdir, monkeypatch, fail):
+    write(workdir / 'ad/f.txt', 'f')
+    write(workdir / 'z.txt')
+    try:
+        os.chflags(workdir / 'ad', stat.UF_IMMUTABLE)
+    except OSError:
+        pytest.skip('file system rejects flags')
+    copyfile = PatchMaker.shutil.copyfile
+
+    def fail_on_z(src, dst):
+        if fail and src == 'z.txt':
+            raise PermissionError(13, 'Permission denied', src)
+        return copyfile(src, dst)
+
+    monkeypatch.setattr(PatchMaker.shutil, 'copyfile', fail_on_z)
+    try:
+        assert PatchMaker.PatchMaker().run(['ad', 'z.txt']) == (1 if fail else 0)
+        if fail:
+            assert not (workdir / 'test_patch').exists()
+        else:
+            assert not os.stat(workdir / 'test_patch/ad').st_flags & stat.UF_IMMUTABLE
+    finally:
+        os.chflags(workdir / 'ad', 0)
+        if (workdir / 'test_patch/ad').exists():
+            os.chflags(workdir / 'test_patch/ad', 0)

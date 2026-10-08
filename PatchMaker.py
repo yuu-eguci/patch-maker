@@ -117,13 +117,15 @@ class PatchMaker:
                 self.visited = set()
                 dest = os.path.join(self.patchdir, path)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
-                donelist.append(
+                if os.path.isdir(path):
                     shutil.copytree(
                         path, dest, ignore=self.ignore_unsafe_entries, copy_function=self.copy_file, dirs_exist_ok=True
                     )
-                    if os.path.isdir(path)
-                    else self.copy_file(path, dest)
-                )
+                    for directory, _, _ in os.walk(dest):
+                        self.drop_special_bits(directory)
+                    donelist.append(dest)
+                else:
+                    donelist.append(self.copy_file(path, dest))
         except OSError:
             with contextlib.suppress(OSError):
                 shutil.rmtree(self.patchdir, onexc=self.retry_with_write_permission)
@@ -138,10 +140,18 @@ class PatchMaker:
         os.utime(copied, ns=(st.st_atime_ns, st.st_mtime_ns))
         return copied
 
+    def drop_special_bits(self, path: str):
+        """copytree がディレクトリへコピーしたファイルフラグと、 setuid などの特殊ビットを外します。"""
+        if hasattr(os, 'chflags'):
+            os.chflags(path, 0)
+        os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) & 0o777)
+
     def retry_with_write_permission(self, func, path, _):
-        """rmtree が権限で失敗したとき、パッチ内の対象と親ディレクトリへ書き込み権限を付けて 1 回だけ再実行します。"""
+        """rmtree の失敗時、パッチ内の対象と親のフラグを外し書き込み権限を付けて 1 回だけ再実行します。"""
         for target in (os.path.dirname(path), path):
             if os.path.commonpath([self.patchdir, target]) == self.patchdir:
+                if hasattr(os, 'chflags'):
+                    os.chflags(target, 0)
                 os.chmod(target, stat.S_IRWXU)
         func(path)
 
