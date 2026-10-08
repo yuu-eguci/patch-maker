@@ -427,3 +427,19 @@ def test_run_prints_each_failed_path_when_copytree_fails(workdir, capsys, monkey
     err = capsys.readouterr().err
     assert 'd/x.txt: [Errno 13] Permission denied' in err
     assert "[('" not in err
+
+
+def test_run_reports_partial_patch_that_could_not_be_removed(workdir, capsys, monkeypatch):
+    write(workdir / 'a.txt')
+
+    def fail(src, dst):
+        raise PermissionError(13, 'Permission denied', src)
+
+    monkeypatch.setattr(PatchMaker.shutil, 'copy', fail)
+    monkeypatch.setattr(PatchMaker.shutil, 'rmtree', lambda path, ignore_errors: None)
+
+    assert PatchMaker.PatchMaker().run(['a.txt']) == 1
+
+    err = capsys.readouterr().err
+    assert 'The partial patch directory remains: test_patch' in err
+    assert 'was not created' not in err

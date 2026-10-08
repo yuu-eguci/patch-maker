@@ -54,7 +54,10 @@ class PatchMaker:
         try:
             donelist = self.create_patch(copypaths)
         except OSError as error:
-            print('<ERROR> Copy failed. The patch directory was not created.', file=sys.stderr)
+            if self.patchdir and os.path.exists(self.patchdir):
+                print(f'<ERROR> Copy failed. The partial patch directory remains: {self.patchdir}', file=sys.stderr)
+            else:
+                print('<ERROR> Copy failed. The patch directory was not created.', file=sys.stderr)
             failures = error.args[0] if isinstance(error, shutil.Error) else [(None, None, error)]
             for src, _, reason in failures:
                 print(f'{src}: {reason}' if src else str(reason), file=sys.stderr)
@@ -91,6 +94,7 @@ class PatchMaker:
 
     def create_patch(self, pathlist: list) -> list:
         """目的であるパッチの作成。"""
+        self.patchdir = None
         self.patchdir = self.make_patch_dir()
         self.skippedlinks = []
         donelist = []
