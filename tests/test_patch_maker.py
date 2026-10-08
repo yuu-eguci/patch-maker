@@ -412,3 +412,18 @@ def test_run_copies_directory_and_child_with_different_case(workdir):
     assert PatchMaker.PatchMaker().run(['D/f.txt', 'd']) == 0
 
     assert (workdir / 'test_patch/d/f.txt').read_text() == 'a'
+
+
+def test_run_prints_each_failed_path_when_copytree_fails(workdir, capsys, monkeypatch):
+    write(workdir / 'd/x.txt')
+
+    def fail(src, dst, **kwargs):
+        raise PatchMaker.shutil.Error([('d/x.txt', 'test_patch/d/x.txt', '[Errno 13] Permission denied')])
+
+    monkeypatch.setattr(PatchMaker.shutil, 'copytree', fail)
+
+    assert PatchMaker.PatchMaker().run(['d']) == 1
+
+    err = capsys.readouterr().err
+    assert 'd/x.txt: [Errno 13] Permission denied' in err
+    assert "[('" not in err
