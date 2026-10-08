@@ -64,6 +64,6 @@ docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pyte
 
 ローカルでは Python 3.13 以上の環境へ `pip install -r requirements-dev.txt` を実行したあと、 `pytest` と `ruff check .` で実行できます。開発用ライブラリのバージョンは `requirements-dev.txt` で固定しています。
 
-GitHub Actions の CI (`.github/workflows/ci.yml`) でも同じ lint とテストを実行します。
+GitHub Actions の CI (`.github/workflows/ci.yml`) でも同じ lint とテストを、 Python 3.13 と 3.14 で実行します。
 
 作業記録は [docs/iona-kest.md](docs/iona-kest.md) にあります。
