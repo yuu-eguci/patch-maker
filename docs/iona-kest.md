@@ -34,6 +34,12 @@ Iona Kest 作業記録
 
 ## 残課題
 
+- Docker のベースイメージは `python:3.13-slim` のタグ指定です。完全な再現性が必要ならダイジェスト固定を検討します。
 - 見つからないパスが 0 件でも `[]` と件数を表示します。ベースラインの出力形式を維持しています。
 - Windows のジャンクション除外 (`os.path.isjunction`) は Windows 実機で未検証です。
 - リポジトリはアーカイブ済みのため、 CI は GitHub 上で未実行です。 actionlint とローカルの Docker 実行で確認しています。
+
+## 再開方法
+
+- `docker build -t patch-maker . && docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pytest -q'` で現状を確認します。
+- 上の進捗に続くバッチを、資料の更新、失敗するテスト、最小実装、整合確認の順で進めます。
