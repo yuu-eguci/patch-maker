@@ -22,6 +22,7 @@ Iona Kest 作業記録
 - [x] バッチ 3: GitHub Actions CI (ローカルファイルのみ。 push はしません) 、開発用ライブラリを requirements-dev.txt で固定
 - [x] バッチ 4: コマンドライン引数と標準入力からのパス受け取り
 - [x] バッチ 5: 同じ秒に 2 回実行したときの `FileExistsError` を解消 (連番付与) 、パッチ名の表示
+- [x] バッチ 6: README の git 例へ `core.quotePath=false` を追加、 ignore パターンをタイムスタンプ形式に限定
 
 ## 残課題
 

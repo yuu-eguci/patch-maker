@@ -30,11 +30,11 @@ Python 3.13 以上が必要です。外部ライブラリは使いません。
 python PatchMaker.py
 ```
 
-`targetpaths` を書き換える代わりに、パスをコマンドライン引数で渡せます。 `-` だけを渡すと、標準入力から 1 行 1 パスで読み込みます。どちらの場合もパスは `PatchMaker.py` があるディレクトリからの相対パスとして扱います。
+`targetpaths` を書き換える代わりに、パスをコマンドライン引数で渡せます。 `-` だけを渡すと、標準入力から 1 行 1 パスで読み込みます。どちらの場合もパスは `PatchMaker.py` があるディレクトリからの相対パスとして扱います。 git は日本語などのファイル名を既定で `"\346..."` の形式で出力するため、 `-c core.quotePath=false` を付けます。
 
 ```bash
 python PatchMaker.py project/html/html1.html project/html/html2.html
-git diff --name-only HEAD~1 | python PatchMaker.py -
+git -c core.quotePath=false diff --name-only HEAD~1 | python PatchMaker.py -
 ```
 
 ### Docker で実行する
@@ -44,7 +44,7 @@ docker build -t patch-maker .
 docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker
 ```
 
-- 標準入力を使う場合は `git diff --name-only HEAD~1 | docker run --rm -i -v "$PWD:/app" patch-maker python PatchMaker.py -` のように `-i` を付けます。
+- 標準入力を使う場合は `git -c core.quotePath=false diff --name-only HEAD~1 | docker run --rm -i -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker python PatchMaker.py -` のように `-i` を付けます。
 - `-e TZ=Asia/Tokyo` を省くと、パッチ名の時刻はコンテナの UTC になります。
 - `--user` を省くと、 Linux ではパッチディレクトリの所有者が root になります。
 
