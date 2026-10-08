@@ -97,7 +97,7 @@ class PatchMaker:
                 dest = os.path.join(self.patchdir, path)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 donelist.append(
-                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_links)
+                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_links, dirs_exist_ok=True)
                     if os.path.isdir(path)
                     else shutil.copy(path, dest)
                 )

@@ -402,3 +402,13 @@ def test_run_removes_partial_patch_when_copy_fails(workdir, capsys, monkeypatch)
     captured = capsys.readouterr()
     assert 'Copy failed' in captured.err
     assert 'Succeeded' not in captured.out
+
+
+def test_run_copies_directory_and_child_with_different_case(workdir):
+    write(workdir / 'd/f.txt', 'a')
+    if not (workdir / 'D').exists():
+        pytest.skip('case-sensitive file system')
+
+    assert PatchMaker.PatchMaker().run(['D/f.txt', 'd']) == 0
+
+    assert (workdir / 'test_patch/d/f.txt').read_text() == 'a'
