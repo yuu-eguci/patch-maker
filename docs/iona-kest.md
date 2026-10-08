@@ -51,6 +51,7 @@ Iona Kest 作業記録
 - [x] バッチ 25: コピーしたファイルの setuid / setgid / sticky ビットを落とす (root 実行で root 所有の setuid ファイルができる問題) 。ファイルコピーを `copy_file` に統一し、更新日時を保持
 - [x] バッチ 26: NUL 文字を含むパスで traceback になる問題を解消 (拒否して一覧表示)
 - [x] バッチ 27: `.dockerignore` を許可リスト方式にし、 `.env` などがイメージに入る問題を解消 (`.env` を置いたコピーでビルドして確認) 。 Docker 実行は `PatchMaker.py` のあるディレクトリで行う旨を README に追記
+- [x] バッチ 28: 開発用依存を `requirements-dev.in` と pip-compile のハッシュ付きロックに分け、 `--require-hashes` でインストール。 actions をコミット SHA で固定し、 checkout に `persist-credentials: false` を指定 (3.13 と 3.14 でロックのインストールを確認)
 
 ## 残課題
 
