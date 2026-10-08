@@ -1,7 +1,7 @@
-.git
-__pycache__/
-.pytest_cache/
-.ruff_cache/
-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]_patch/
-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]_patch_[0-9]*/
-project/
+# 許可リスト方式です。イメージに入れるファイルだけを列挙します。
+*
+!PatchMaker.py
+!pyproject.toml
+!requirements-dev.txt
+!tests/
+tests/**/__pycache__

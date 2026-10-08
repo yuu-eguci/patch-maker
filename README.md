@@ -99,6 +99,8 @@ docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch
 ```
 
 - 標準入力を使う場合は `git diff --name-only HEAD~1 | docker run --rm -i -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker python PatchMaker.py -` のように `-i` を付けます。
+- イメージには `PatchMaker.py` 、テスト、設定ファイルだけを入れます (`.dockerignore` の許可リスト) 。 `.env` などはイメージに入りません。
+- `-v "$PWD:/app"` でイメージ内の `/app` を置き換えるため、 `PatchMaker.py` があるディレクトリで実行します。
 - `-e TZ=Asia/Tokyo` を省くと、パッチ名の時刻はコンテナの UTC になります。
 - `--user` を省くと、 Linux ではパッチディレクトリの所有者が root になります。
 
