@@ -62,7 +62,7 @@ docker build -t patch-maker .
 docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pytest -q'
 ```
 
-ローカルでは Python 3.13 以上の環境へ `pip install -r requirements-dev.txt` を実行したあと、 `ruff check .` 、 `ruff format --check .` 、 `pytest` で実行できます。開発用ライブラリのバージョンは `requirements-dev.txt` で固定しています。
+ローカルでは Python 3.13 以上の環境へ `pip install -r requirements-dev.txt` を実行したあと、 `ruff check .` 、 `ruff format --check .` 、 `pytest` で実行できます。開発用ライブラリのバージョンは `requirements-dev.txt` で、 Docker のベースイメージは `Dockerfile` のダイジェストで固定しています。
 
 GitHub Actions の CI (`.github/workflows/ci.yml`) でも同じ lint とテストを、 Python 3.13 と 3.14 で実行します。
 
