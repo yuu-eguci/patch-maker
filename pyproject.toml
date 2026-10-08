@@ -4,12 +4,6 @@ version = "0.1.0"
 description = "選択したファイルをタイムスタンプ付きのパッチディレクトリへコピーするツールです。"
 requires-python = ">=3.13"
 
-[dependency-groups]
-dev = [
-    "pytest>=8",
-    "ruff>=0.6",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
