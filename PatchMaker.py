@@ -21,6 +21,10 @@ from pprint import pprint
 
 GIT_QUOTED_PATH = re.compile(r'"(?:[^"\\\x00-\x1f\x7f-\U0010ffff]|\\[abtnvfr"\\]|\\[0-3][0-7]{2})*"')
 
+USAGE = """Usage: python PatchMaker.py [PATH ...]
+       python PatchMaker.py -   (read paths from stdin, one per line)
+Without PATH, the targetpaths string at the top of this file is used."""
+
 PATCHNAME = datetime.datetime.today().strftime('%Y%m%d_%H%M%S') + '_patch'
 
 
@@ -151,6 +155,9 @@ class PatchMaker:
 def main(argv: list | None = None) -> int:
     """引数があれば引数を、 `-` だけなら標準入力を、なければ冒頭の targetpaths を対象にします。"""
     argv = sys.argv[1:] if argv is None else argv
+    if argv in (['-h'], ['--help']):
+        print(USAGE)
+        return 0
     paths = sys.stdin.read() if argv == ['-'] else argv or targetpaths
     pm = PatchMaker()
     pm.cd_()

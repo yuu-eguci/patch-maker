@@ -374,3 +374,11 @@ def test_run_reports_duplicated_rejected_path_once(workdir, capsys):
     PatchMaker.PatchMaker().run(['../x', '../x'])
 
     assert '1 paths above were rejected' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('option', ['-h', '--help'])
+def test_main_prints_usage_with_help_option(workdir, no_cd, capsys, option):
+    assert PatchMaker.main([option]) == 0
+
+    assert 'Usage:' in capsys.readouterr().out
+    assert not (workdir / 'test_patch').exists()
