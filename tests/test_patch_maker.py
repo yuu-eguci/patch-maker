@@ -356,3 +356,21 @@ def test_run_skips_broken_symlinks_in_directory(appdir, capsys):
     assert (appdir / 'test_patch/d/keep.txt').read_text() == 'keep'
     assert not (appdir / 'test_patch/d/broken.txt').exists()
     assert '1 symlinks above were skipped' in capsys.readouterr().out
+
+
+def test_make_pathlist_keeps_git_quoted_line_that_is_not_utf8():
+    assert PatchMaker.PatchMaker().make_pathlist(['"\\377.txt"']) == ['"\\377.txt"']
+
+
+def test_cd_moves_to_script_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    PatchMaker.PatchMaker().cd_()
+
+    assert os.getcwd() == os.path.dirname(os.path.abspath(PatchMaker.__file__))
+
+
+def test_run_reports_duplicated_rejected_path_once(workdir, capsys):
+    PatchMaker.PatchMaker().run(['../x', '../x'])
+
+    assert '1 paths above were rejected' in capsys.readouterr().out
