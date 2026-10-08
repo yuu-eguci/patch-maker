@@ -35,10 +35,14 @@ class PatchMaker:
     def run(self, targetpaths) -> int:
         """トップレベルメソッド。終了コードを返します。"""
         pathlist = self.make_pathlist(targetpaths)
-        rejectedpaths = [path for path in pathlist if self.is_unsafe_path(path)]
-        safepaths = [path for path in pathlist if path not in rejectedpaths]
-        absentpaths = self.get_absent_paths(safepaths)
-        copypaths = [path for path in safepaths if path not in absentpaths]
+        rejectedpaths, absentpaths, copypaths = [], [], []
+        for path in pathlist:
+            if self.is_unsafe_path(path):
+                rejectedpaths.append(path)
+            elif not os.path.exists(os.path.normpath(path)):
+                absentpaths.append(path)
+            else:
+                copypaths.append(path)
         self.output_ignored(absentpaths, rejectedpaths)
         if not copypaths:
             print('<ERROR> No files to copy. The patch directory was not created.', file=sys.stderr)
@@ -72,10 +76,6 @@ class PatchMaker:
     def is_inside_base(self, path: str) -> bool:
         """リンクを解決した実体が、カレントディレクトリの配下にあるかを判定します。"""
         return os.path.realpath(path).startswith(os.path.realpath(os.curdir) + os.sep)
-
-    def get_absent_paths(self, pathlist: list) -> list:
-        """インプットされたパスのうち、存在しないものを返します。"""
-        return [path for path in pathlist if not os.path.exists(os.path.normpath(path))]
 
     def create_patch(self, pathlist: list) -> list:
         """目的であるパッチの作成。"""
