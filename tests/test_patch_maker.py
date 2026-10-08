@@ -3,6 +3,7 @@
 import io
 import ntpath
 import os
+import stat
 from pathlib import PureWindowsPath
 
 import pytest
@@ -392,14 +393,14 @@ def test_main_prints_usage_with_help_option(workdir, no_cd, capsys, option):
 def test_run_removes_partial_patch_when_copy_fails(workdir, capsys, monkeypatch):
     write(workdir / 'a.txt')
     write(workdir / 'b.txt')
-    copy = PatchMaker.shutil.copy
+    copy2 = PatchMaker.shutil.copy2
 
     def fail_on_b(src, dst):
         if src == 'b.txt':
             raise PermissionError(13, 'Permission denied', src)
-        return copy(src, dst)
+        return copy2(src, dst)
 
-    monkeypatch.setattr(PatchMaker.shutil, 'copy', fail_on_b)
+    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail_on_b)
 
     assert PatchMaker.PatchMaker().run(['a.txt', 'b.txt']) == 1
 
@@ -440,7 +441,7 @@ def test_run_reports_partial_patch_that_could_not_be_removed(workdir, capsys, mo
     def fail(src, dst):
         raise PermissionError(13, 'Permission denied', src)
 
-    monkeypatch.setattr(PatchMaker.shutil, 'copy', fail)
+    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail)
     monkeypatch.setattr(PatchMaker.shutil, 'rmtree', lambda path, onexc: None)
 
     assert PatchMaker.PatchMaker().run(['a.txt']) == 1
@@ -455,7 +456,14 @@ def test_run_removes_partial_patch_with_read_only_copies(workdir, monkeypatch):
     write(workdir / 'ro/f.txt')
     write(workdir / 'z.txt')
     (workdir / 'ro').chmod(0o555)
-    monkeypatch.setattr(PatchMaker.shutil, 'copy', lambda src, dst: (_ for _ in ()).throw(PermissionError(13, 'x')))
+    copy2 = PatchMaker.shutil.copy2
+
+    def fail_on_z(src, dst):
+        if src == 'z.txt':
+            raise PermissionError(13, 'Permission denied', src)
+        return copy2(src, dst)
+
+    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail_on_z)
 
     try:
         assert PatchMaker.PatchMaker().run(['ro', 'z.txt']) == 1
@@ -522,3 +530,15 @@ def test_run_skips_git_entries_inside_directory(workdir, capsys):
     assert not (workdir / 'test_patch/vendor/lib/sub/.git').exists()
     out = capsys.readouterr().out
     assert '2 entries above were skipped' in out
+
+
+@pytest.mark.parametrize('target', ['d', 'd/f'])
+def test_run_drops_special_permission_bits(workdir, target):
+    write(workdir / 'd/f')
+    (workdir / 'd/f').chmod(0o6755)
+    if stat.S_IMODE((workdir / 'd/f').stat().st_mode) != 0o6755:
+        pytest.skip('file system ignores special bits')
+
+    assert PatchMaker.PatchMaker().run([target]) == 0
+
+    assert stat.S_IMODE((workdir / 'test_patch/d/f').stat().st_mode) == 0o755

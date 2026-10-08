@@ -107,15 +107,23 @@ class PatchMaker:
                 dest = os.path.join(self.patchdir, path)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 donelist.append(
-                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_entries, dirs_exist_ok=True)
+                    shutil.copytree(
+                        path, dest, ignore=self.ignore_unsafe_entries, copy_function=self.copy_file, dirs_exist_ok=True
+                    )
                     if os.path.isdir(path)
-                    else shutil.copy(path, dest)
+                    else self.copy_file(path, dest)
                 )
         except OSError:
             with contextlib.suppress(OSError):
                 shutil.rmtree(self.patchdir, onexc=self.retry_with_write_permission)
             raise
         return donelist
+
+    def copy_file(self, src: str, dst: str) -> str:
+        """更新日時を保ってコピーし、 setuid / setgid / sticky ビットを落とします。"""
+        copied = shutil.copy2(src, dst)
+        os.chmod(copied, stat.S_IMODE(os.stat(copied).st_mode) & 0o777)
+        return copied
 
     def retry_with_write_permission(self, func, path, _):
         """rmtree が権限で失敗したとき、パッチ内の対象と親ディレクトリへ書き込み権限を付けて 1 回だけ再実行します。"""
