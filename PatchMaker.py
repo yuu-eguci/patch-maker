@@ -88,9 +88,19 @@ class PatchMaker:
             '\0' in path
             or bool(normalized.anchor)
             or normalized.parts[:1] in ((), ('..',))
-            or any(part.casefold() == '.git' for part in normalized.parts)
+            or any(self.is_git_name(part) for part in normalized.parts)
             or not self.is_inside_base(os.path.normpath(path))
+            or self.resolves_into_git(os.path.normpath(path))
         )
+
+    def is_git_name(self, name: str) -> bool:
+        """名前が .git かを判定します。 Windows で同じ名前になる大文字小文字違いや末尾の . と空白も含めます。"""
+        return name.casefold().rstrip('. ') == '.git'
+
+    def resolves_into_git(self, path: str) -> bool:
+        """リンクを解決した実体のパスに .git が含まれるかを判定します。"""
+        real = os.path.relpath(os.path.realpath(path), os.path.realpath(os.curdir))
+        return any(self.is_git_name(part) for part in PurePath(real).parts)
 
     def is_inside_base(self, path: str) -> bool:
         """リンクを解決した実体が、カレントディレクトリの配下にあるかを判定します。"""
@@ -142,14 +152,19 @@ class PatchMaker:
         ignored = []
         for name in names:
             path = os.path.join(src, name)
-            if name.casefold() == '.git':
+            if self.is_git_name(name):
                 ignored.append(name)
                 self.skippedentries.append(path)
                 continue
             if not (os.path.islink(path) or os.path.isjunction(path)):
                 continue
             real = os.path.realpath(path)
-            if not os.path.exists(path) or not self.is_inside_base(path) or real in self.visited:
+            if (
+                not os.path.exists(path)
+                or not self.is_inside_base(path)
+                or self.resolves_into_git(path)
+                or real in self.visited
+            ):
                 ignored.append(name)
                 self.skippedentries.append(path)
             elif os.path.isdir(path):

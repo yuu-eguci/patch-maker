@@ -548,3 +548,28 @@ def test_run_rejects_path_with_nul_character(workdir, capsys):
     assert PatchMaker.PatchMaker().run(['a\x00b']) == 1
 
     assert '1 paths above were rejected' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('target', ['gl', 'gl/config', 'cfg', '.git.', 'sub/.git /x'])
+def test_run_rejects_paths_resolving_into_git(workdir, capsys, target):
+    write(workdir / '.git/config', 'secret')
+    (workdir / 'gl').symlink_to('.git')
+    (workdir / 'cfg').symlink_to('.git/config')
+
+    assert PatchMaker.PatchMaker().run([target]) == 1
+
+    assert '1 paths above were rejected' in capsys.readouterr().out
+
+
+def test_run_skips_links_into_git_inside_directory(workdir, capsys):
+    write(workdir / '.git/config', 'secret')
+    write(workdir / 'd/f.txt', 'f')
+    (workdir / 'd/gl').symlink_to('../.git')
+    (workdir / 'd/cfg').symlink_to('../.git/config')
+
+    assert PatchMaker.PatchMaker().run(['d']) == 0
+
+    assert (workdir / 'test_patch/d/f.txt').read_text() == 'f'
+    assert not (workdir / 'test_patch/d/gl').exists()
+    assert not (workdir / 'test_patch/d/cfg').exists()
+    assert '2 entries above were skipped' in capsys.readouterr().out
