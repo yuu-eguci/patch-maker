@@ -3,6 +3,51 @@ PatchMaker
 
 選択したファイルやディレクトリを、タイムスタンプ付きのパッチディレクトリ (`YYYYmmdd_HHMMSS_patch`) へ相対パスを保ったままコピーするツールです。
 
+## すぐ試す
+
+Docker があれば、 clone したディレクトリで次を実行するだけで試せます。 `PatchMaker.py` 冒頭の `targetpaths` に書かれた 2 ファイルを用意して、パッチを作ります。
+
+```bash
+mkdir -p project/html && echo one > project/html/html1.html && echo two > project/html/html2.html
+docker build -t patch-maker .
+docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker
+```
+
+起こること:
+
+- 次のように表示され、終了コード 0 で終わります (時刻は実行時のものになります) 。
+
+```text
+[]
+<INFO> 0 files above were not found and were ignored.
+<INFO> Succeeded! 2 patch files were created. They are not shown on console.
+<INFO> Patch directory: 20261008_162906_patch
+```
+
+- 次のファイルができます。元のファイルは変更されません。
+
+```text
+20261008_162906_patch/project/html/html1.html
+20261008_162906_patch/project/html/html2.html
+```
+
+パスを引数で渡すこともできます。外を指すパスは拒否され、存在しないパスは無視されます。
+
+```bash
+docker run --rm -e TZ=Asia/Tokyo --user "$(id -u):$(id -g)" -v "$PWD:/app" patch-maker python PatchMaker.py project/html/html1.html ../secret.txt missing.txt
+```
+
+```text
+['../secret.txt']
+<INFO> 1 paths above were rejected because they are not inside this directory.
+['missing.txt']
+<INFO> 1 files above were not found and were ignored.
+<INFO> Succeeded! 1 patch files were created. They are not shown on console.
+<INFO> Patch directory: 20261008_162907_patch
+```
+
+コピーできるパスが 1 つもない場合 (`python PatchMaker.py missing.txt` など) は、パッチディレクトリを作らず `<ERROR> No files to copy. The patch directory was not created.` を表示して終了コード 1 で終わります。
+
 ## Usage
 
 ![1](media/PATCHMAKER.jpg)
