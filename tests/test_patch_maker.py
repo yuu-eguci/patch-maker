@@ -237,3 +237,91 @@ def test_main_returns_zero_on_success(workdir, no_cd):
     write(workdir / 'a.txt')
 
     assert PatchMaker.main(['a.txt']) == 0
+
+
+@pytest.fixture
+def appdir(tmp_path, monkeypatch):
+    """外側にファイルを置いた app ディレクトリへ移動します。"""
+    app = tmp_path / 'app'
+    app.mkdir()
+    write(tmp_path / 'outside/secret.txt', 'secret')
+    monkeypatch.chdir(app)
+    monkeypatch.setattr(PatchMaker, 'PATCHNAME', 'test_patch')
+    return app
+
+
+@pytest.mark.parametrize('target', ['link.txt', 'linkdir/secret.txt'])
+def test_run_rejects_symlink_resolving_outside(appdir, capsys, target):
+    (appdir / 'link.txt').symlink_to(appdir.parent / 'outside/secret.txt')
+    (appdir / 'linkdir').symlink_to(appdir.parent / 'outside')
+
+    assert PatchMaker.PatchMaker().run([target]) == 1
+
+    assert '1 paths above were rejected' in capsys.readouterr().out
+
+
+def test_run_skips_links_in_directory_pointing_outside(appdir, capsys):
+    write(appdir / 'd/keep.txt', 'keep')
+    (appdir / 'd/secret.txt').symlink_to(appdir.parent / 'outside/secret.txt')
+    (appdir / 'd/outside').symlink_to(appdir.parent / 'outside')
+
+    PatchMaker.PatchMaker().run(['d'])
+
+    assert (appdir / 'test_patch/d/keep.txt').read_text() == 'keep'
+    assert not (appdir / 'test_patch/d/secret.txt').exists()
+    assert not (appdir / 'test_patch/d/outside').exists()
+    out = capsys.readouterr().out
+    assert '2 symlinks above were skipped' in out
+
+
+def test_run_skips_symlink_loops(appdir):
+    write(appdir / 'project/a/f.txt', 'a')
+    write(appdir / 'project/b/g.txt', 'b')
+    (appdir / 'project/a/up').symlink_to('..')
+    (appdir / 'project/a/to_b').symlink_to('../b')
+    (appdir / 'project/b/to_a').symlink_to('../a')
+
+    PatchMaker.PatchMaker().run(['project/a'])
+
+    assert (appdir / 'test_patch/project/a/f.txt').read_text() == 'a'
+    assert (appdir / 'test_patch/project/a/to_b/g.txt').read_text() == 'b'
+    assert not (appdir / 'test_patch/project/a/up').exists()
+    assert not (appdir / 'test_patch/project/a/to_b/to_a').exists()
+
+
+def test_run_follows_symlinks_inside_directory(appdir):
+    write(appdir / 'real.txt', 'real')
+    write(appdir / 'd/keep.txt')
+    (appdir / 'd/link.txt').symlink_to('../real.txt')
+
+    PatchMaker.PatchMaker().run(['d'])
+
+    copied = appdir / 'test_patch/d/link.txt'
+    assert not copied.is_symlink()
+    assert copied.read_text() == 'real'
+
+
+def test_run_checks_normalized_path_for_symlinks(appdir):
+    write(appdir / 'deep/foo', 'inside')
+    (appdir / 'linkdir').symlink_to(appdir / 'deep/x', target_is_directory=True)
+    (appdir / 'deep/x').mkdir()
+    (appdir / 'foo').symlink_to(appdir.parent / 'outside/secret.txt')
+
+    assert PatchMaker.PatchMaker().run(['linkdir/../foo']) == 1
+
+    assert not (appdir / 'test_patch/foo').exists()
+
+
+def test_run_copies_directory_reached_by_several_links_once(appdir, capsys):
+    for i in range(16):
+        (appdir / f'chain/d{i}').mkdir(parents=True)
+    write(appdir / 'chain/d16/f.txt', 'f')
+    for i in range(16):
+        (appdir / f'chain/d{i}/x').symlink_to(f'../d{i + 1}')
+        (appdir / f'chain/d{i}/y').symlink_to(f'../d{i + 1}')
+
+    PatchMaker.PatchMaker().run(['chain/d0'])
+
+    copied = list((appdir / 'test_patch').rglob('f.txt'))
+    assert len(copied) == 1
+    assert '16 symlinks above were skipped' in capsys.readouterr().out

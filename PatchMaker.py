@@ -48,23 +48,55 @@ class PatchMaker:
         return list(dict.fromkeys(line.strip() for line in lines if line.strip()))
 
     def is_unsafe_path(self, path: str) -> bool:
-        """ルートやドライブ付きのパスと、ディレクトリ全体またはその外を指すパスを判定します。"""
+        """ルートやドライブ付きのパスと、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""
         normalized = PurePath(os.path.normpath(path))
-        return bool(normalized.anchor) or normalized.parts[:1] in ((), ('..',))
+        return (
+            bool(normalized.anchor)
+            or normalized.parts[:1] in ((), ('..',))
+            or not self.is_inside_base(os.path.normpath(path))
+        )
+
+    def is_inside_base(self, path: str) -> bool:
+        """リンクを解決した実体が、カレントディレクトリの配下にあるかを判定します。"""
+        return os.path.realpath(path).startswith(os.path.realpath(os.curdir) + os.sep)
 
     def get_absent_paths(self, pathlist: list) -> list:
         """インプットされたパスのうち、存在しないものを返します。"""
-        return [path for path in pathlist if not os.path.exists(path)]
+        return [path for path in pathlist if not os.path.exists(os.path.normpath(path))]
 
     def create_patch(self, pathlist: list) -> list:
         """目的であるパッチの作成。"""
         self.patchdir = self.make_patch_dir()
+        self.skippedlinks = []
         donelist = []
         for path in self.select_copy_targets(pathlist):
+            self.visited = set()
             dest = os.path.join(self.patchdir, path)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
-            donelist.append(shutil.copytree(path, dest) if os.path.isdir(path) else shutil.copy(path, dest))
+            donelist.append(
+                shutil.copytree(path, dest, ignore=self.ignore_unsafe_links)
+                if os.path.isdir(path)
+                else shutil.copy(path, dest)
+            )
         return donelist
+
+    def ignore_unsafe_links(self, src: str, names: list) -> list:
+        """copytree 中に、外側を指すリンクと、コピー済みのディレクトリや祖先を指すリンクを除外します。"""
+        current = src
+        while current not in ('', os.curdir):
+            self.visited.add(os.path.realpath(current))
+            current = os.path.dirname(current)
+        ignored = []
+        for name in names:
+            path = os.path.join(src, name)
+            if not (os.path.islink(path) or os.path.isjunction(path)):
+                continue
+            if not self.is_inside_base(path) or os.path.realpath(path) in self.visited:
+                ignored.append(name)
+                self.skippedlinks.append(path)
+            elif os.path.isdir(path):
+                self.visited.add(os.path.realpath(path))
+        return ignored
 
     def make_patch_dir(self) -> str:
         """パッチディレクトリを作成して名前を返します。同名のディレクトリがあれば連番を付けます。"""
@@ -95,6 +127,9 @@ class PatchMaker:
 
     def output_result(self, donelist):
         """「終わったよー」の出力。"""
+        if self.skippedlinks:
+            pprint(self.skippedlinks)
+            print(f'<INFO> {len(self.skippedlinks)} symlinks above were skipped (outside or already copied).')
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
         print(f'<INFO> Patch directory: {self.patchdir}')
 
