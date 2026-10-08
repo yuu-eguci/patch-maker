@@ -214,3 +214,26 @@ def test_run_prints_patch_directory_name(workdir, capsys):
     PatchMaker.PatchMaker().run(['a.txt'])
 
     assert '<INFO> Patch directory: test_patch' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('argv', [['missing.txt'], ['../outside.txt']])
+def test_main_fails_without_creating_patch_when_nothing_to_copy(workdir, no_cd, capsys, argv):
+    assert PatchMaker.main(argv) == 1
+
+    assert not (workdir / 'test_patch').exists()
+    captured = capsys.readouterr()
+    assert 'No files to copy' in captured.err
+    assert 'Succeeded' not in captured.out
+
+
+def test_main_fails_with_empty_stdin(workdir, no_cd, monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.StringIO(''))
+
+    assert PatchMaker.main(['-']) == 1
+    assert not (workdir / 'test_patch').exists()
+
+
+def test_main_returns_zero_on_success(workdir, no_cd):
+    write(workdir / 'a.txt')
+
+    assert PatchMaker.main(['a.txt']) == 0

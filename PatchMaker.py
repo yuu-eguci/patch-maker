@@ -28,14 +28,19 @@ class PatchMaker:
         else:
             os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    def run(self, targetpaths):
-        """トップレベルメソッド。"""
+    def run(self, targetpaths) -> int:
+        """トップレベルメソッド。終了コードを返します。"""
         pathlist = self.make_pathlist(targetpaths)
         rejectedpaths = [path for path in pathlist if self.is_unsafe_path(path)]
         safepaths = [path for path in pathlist if path not in rejectedpaths]
         absentpaths = self.get_absent_paths(safepaths)
-        donelist = self.create_patch([path for path in safepaths if path not in absentpaths])
-        self.output_result(donelist, absentpaths, rejectedpaths)
+        copypaths = [path for path in safepaths if path not in absentpaths]
+        self.output_ignored(absentpaths, rejectedpaths)
+        if not copypaths:
+            print('<ERROR> No files to copy. The patch directory was not created.', file=sys.stderr)
+            return 1
+        self.output_result(self.create_patch(copypaths))
+        return 0
 
     def make_pathlist(self, targetpaths: str | list) -> list:
         """文字列またはリストで渡されたパスから、前後の空白と空行と重複を除いた配列を作ります。"""
@@ -80,25 +85,28 @@ class PatchMaker:
                 selected.append(path)
         return selected
 
-    def output_result(self, donelist, absentpaths, rejectedpaths=()):
-        """「終わったよー」の出力。"""
+    def output_ignored(self, absentpaths, rejectedpaths):
+        """コピーしなかったパスの出力。"""
         if rejectedpaths:
             pprint(rejectedpaths)
             print(f'<INFO> {len(rejectedpaths)} paths above were rejected because they are not inside this directory.')
         pprint(absentpaths)
         print(f'<INFO> {len(absentpaths)} files above were not found and were ignored.')
+
+    def output_result(self, donelist):
+        """「終わったよー」の出力。"""
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
         print(f'<INFO> Patch directory: {self.patchdir}')
 
 
-def main(argv: list | None = None):
+def main(argv: list | None = None) -> int:
     """引数があれば引数を、 `-` だけなら標準入力を、なければ冒頭の targetpaths を対象にします。"""
     argv = sys.argv[1:] if argv is None else argv
     paths = sys.stdin.read() if argv == ['-'] else argv or targetpaths
     pm = PatchMaker()
     pm.cd_()
-    pm.run(paths)
+    return pm.run(paths)
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
