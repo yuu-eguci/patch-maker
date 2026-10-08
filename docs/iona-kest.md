@@ -58,6 +58,7 @@ Iona Kest 作業記録
 - [x] バッチ 32: Dependabot で Docker のベースイメージ、 actions 、 pip のロックを毎週更新提案 (設定ファイルの追加のみ。 push していないため未稼働)
 - [x] バッチ 33: ディレクトリにも copytree 経由でファイルフラグと特殊ビットがコピーされる問題を解消。後片付けの再削除でもフラグを外す (Docker の root / root 以外、 macOS の Python 3.14 で確認)
 - [x] バッチ 34: ロックを uv の `--universal` で生成し直し、 Windows だけで使う colorama のハッシュを含める (Linux の 3.13 / 3.14 と macOS の 3.14 でインストールを確認)
+- [x] バッチ 35: 後片付けの再試行で `os.open` / `os.scandir` にパスだけを渡して TypeError になり、 traceback と作りかけのパッチが残るバグ (バッチ 21 由来) を修正。同じパスの再試行は 1 回までに制限 (Docker で別ユーザー所有ディレクトリの再現手順を確認)
 
 ## 残課題
 

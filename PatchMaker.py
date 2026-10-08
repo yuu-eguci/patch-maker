@@ -127,6 +127,7 @@ class PatchMaker:
                 else:
                     donelist.append(self.copy_file(path, dest))
         except OSError:
+            self.retried = set()
             with contextlib.suppress(OSError):
                 shutil.rmtree(self.patchdir, onexc=self.retry_with_write_permission)
             raise
@@ -146,14 +147,21 @@ class PatchMaker:
             os.chflags(path, 0)
         os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) & 0o777)
 
-    def retry_with_write_permission(self, func, path, _):
-        """rmtree の失敗時、パッチ内の対象と親のフラグを外し書き込み権限を付けて 1 回だけ再実行します。"""
+    def retry_with_write_permission(self, func, path, error):
+        """rmtree の失敗時、パッチ内の対象と親のフラグを外し書き込み権限を付けて、パスごとに 1 回だけ再実行します。"""
+        if path in self.retried:
+            raise error
+        self.retried.add(path)
         for target in (os.path.dirname(path), path):
             if os.path.commonpath([self.patchdir, target]) == self.patchdir:
                 if hasattr(os, 'chflags'):
                     os.chflags(target, 0)
                 os.chmod(target, stat.S_IRWXU)
-        func(path)
+        if func in (os.open, os.scandir):
+            # 開けなかったディレクトリは、権限を付けたあとで中身ごと削除し直します。
+            shutil.rmtree(path, onexc=self.retry_with_write_permission)
+        else:
+            func(path)
 
     def ignore_unsafe_entries(self, src: str, names: list) -> list:
         """copytree 中に、 .git と、壊れたリンク、外側やコピー済みのディレクトリや祖先を指すリンクを除外します。"""

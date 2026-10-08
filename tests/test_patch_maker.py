@@ -479,6 +479,7 @@ def test_retry_with_write_permission_does_not_chmod_outside_patch(workdir):
     workdir.chmod(0o755)
     pm = PatchMaker.PatchMaker()
     pm.patchdir = 'test_patch'
+    pm.retried = set()
 
     pm.retry_with_write_permission(lambda path: None, 'test_patch', None)
 
@@ -630,3 +631,32 @@ def test_run_handles_locked_directory(workdir, monkeypatch, fail):
         os.chflags(workdir / 'ad', 0)
         if (workdir / 'test_patch/ad').exists():
             os.chflags(workdir / 'test_patch/ad', 0)
+
+
+@pytest.mark.skipif(os.name != 'posix' or os.geteuid() == 0, reason='root ignores permissions')
+@pytest.mark.parametrize('func', [os.open, os.scandir])
+def test_retry_with_write_permission_removes_unreadable_directory(workdir, func):
+    (workdir / 'test_patch/x/y').mkdir(parents=True)
+    (workdir / 'test_patch/x').chmod(0)
+    pm = PatchMaker.PatchMaker()
+    pm.patchdir = 'test_patch'
+    pm.retried = set()
+
+    try:
+        pm.retry_with_write_permission(func, 'test_patch/x', PermissionError(13, 'x'))
+    finally:
+        if (workdir / 'test_patch/x').exists():
+            (workdir / 'test_patch/x').chmod(0o755)
+
+    assert not (workdir / 'test_patch/x').exists()
+
+
+def test_retry_with_write_permission_gives_up_on_second_failure(workdir):
+    (workdir / 'test_patch').mkdir()
+    pm = PatchMaker.PatchMaker()
+    pm.patchdir = 'test_patch'
+    pm.retried = {'test_patch/x'}
+    error = PermissionError(13, 'x')
+
+    with pytest.raises(PermissionError):
+        pm.retry_with_write_permission(os.unlink, 'test_patch/x', error)
