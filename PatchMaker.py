@@ -94,7 +94,7 @@ class PatchMaker:
         return donelist
 
     def ignore_unsafe_links(self, src: str, names: list) -> list:
-        """copytree 中に、外側を指すリンクと、コピー済みのディレクトリや祖先を指すリンクを除外します。"""
+        """copytree 中に、壊れたリンク、外側を指すリンク、コピー済みのディレクトリや祖先を指すリンクを除外します。"""
         current = src
         while current not in ('', os.curdir):
             self.visited.add(os.path.realpath(current))
@@ -104,11 +104,12 @@ class PatchMaker:
             path = os.path.join(src, name)
             if not (os.path.islink(path) or os.path.isjunction(path)):
                 continue
-            if not self.is_inside_base(path) or os.path.realpath(path) in self.visited:
+            real = os.path.realpath(path)
+            if not os.path.exists(path) or not self.is_inside_base(path) or real in self.visited:
                 ignored.append(name)
                 self.skippedlinks.append(path)
             elif os.path.isdir(path):
-                self.visited.add(os.path.realpath(path))
+                self.visited.add(real)
         return ignored
 
     def make_patch_dir(self) -> str:
@@ -142,7 +143,7 @@ class PatchMaker:
         """「終わったよー」の出力。"""
         if self.skippedlinks:
             pprint(self.skippedlinks)
-            print(f'<INFO> {len(self.skippedlinks)} symlinks above were skipped (outside or already copied).')
+            print(f'<INFO> {len(self.skippedlinks)} symlinks above were skipped (broken, outside or already copied).')
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
         print(f'<INFO> Patch directory: {self.patchdir}')
 

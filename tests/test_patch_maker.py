@@ -345,3 +345,14 @@ def test_main_copies_git_quoted_path_from_stdin(workdir, no_cd, monkeypatch):
 
     assert PatchMaker.main(['-']) == 0
     assert (workdir / 'test_patch/d/日.txt').read_text() == 'jp'
+
+
+def test_run_skips_broken_symlinks_in_directory(appdir, capsys):
+    write(appdir / 'd/keep.txt', 'keep')
+    (appdir / 'd/broken.txt').symlink_to('missing.txt')
+
+    assert PatchMaker.PatchMaker().run(['d']) == 0
+
+    assert (appdir / 'test_patch/d/keep.txt').read_text() == 'keep'
+    assert not (appdir / 'test_patch/d/broken.txt').exists()
+    assert '1 symlinks above were skipped' in capsys.readouterr().out
