@@ -62,6 +62,8 @@ Iona Kest 作業記録
 
 ## 残課題
 
+- コピー後に自分で一覧できないディレクトリ (別ユーザー所有でグループだけ読めるものなど) は `os.walk` が飛ばすため、 sticky などの特殊ビットが残ることがあります。実害はないため未対応です。
+- `-n` / `--dry-run` は探索で候補に挙がりましたが、作り直しが容易なため見送りました。
 - ロックの Windows でのインストールは実機で未確認です。 Dependabot の pip 更新が uv 生成のロックを正しく再生成できるかも、 push していないため未確認です。
 - バッチ 31 の所有者確認 (`stat -c %u`) は Linux ランナー向けです。 macOS の Docker Desktop ではマウント越しの所有者が実際と異なって見えるため、ローカルでは中身の確認だけ行っています。 push していないため GitHub 上では未実行です。
 - ファイルフラグのテストは macOS などフラグに対応した環境でだけ動きます (`/opt/homebrew/bin/python3.14` の venv で確認) 。
@@ -74,4 +76,6 @@ Iona Kest 作業記録
 ## 再開方法
 
 - `docker build -t patch-maker . && docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pytest -q'` で現状を確認します。
-- 上の進捗に続くバッチを、資料の更新、失敗するテスト、最小実装、整合確認の順で進めます。
+- 権限まわりのテストは root 以外で実行します。 `docker run --rm --user 1000:1000 -e HOME=/tmp patch-maker pytest -q -p no:cacheprovider`
+- 大文字小文字やファイルフラグのテストは macOS で実行します。 Python 3.13 以上の venv へ `pip install --require-hashes -r requirements-dev.txt` をしたうえで、リポジトリのコピーで `pytest -q -p no:cacheprovider` を実行します。
+- 上の進捗に続くバッチを、資料の更新、失敗するテスト、最小実装、独立レビュー、整合確認の順で進めます。
