@@ -393,14 +393,14 @@ def test_main_prints_usage_with_help_option(workdir, no_cd, capsys, option):
 def test_run_removes_partial_patch_when_copy_fails(workdir, capsys, monkeypatch):
     write(workdir / 'a.txt')
     write(workdir / 'b.txt')
-    copy2 = PatchMaker.shutil.copy2
+    copyfile = PatchMaker.shutil.copyfile
 
     def fail_on_b(src, dst):
         if src == 'b.txt':
             raise PermissionError(13, 'Permission denied', src)
-        return copy2(src, dst)
+        return copyfile(src, dst)
 
-    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail_on_b)
+    monkeypatch.setattr(PatchMaker.shutil, 'copyfile', fail_on_b)
 
     assert PatchMaker.PatchMaker().run(['a.txt', 'b.txt']) == 1
 
@@ -441,7 +441,7 @@ def test_run_reports_partial_patch_that_could_not_be_removed(workdir, capsys, mo
     def fail(src, dst):
         raise PermissionError(13, 'Permission denied', src)
 
-    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail)
+    monkeypatch.setattr(PatchMaker.shutil, 'copyfile', fail)
     monkeypatch.setattr(PatchMaker.shutil, 'rmtree', lambda path, onexc: None)
 
     assert PatchMaker.PatchMaker().run(['a.txt']) == 1
@@ -456,14 +456,14 @@ def test_run_removes_partial_patch_with_read_only_copies(workdir, monkeypatch):
     write(workdir / 'ro/f.txt')
     write(workdir / 'z.txt')
     (workdir / 'ro').chmod(0o555)
-    copy2 = PatchMaker.shutil.copy2
+    copyfile = PatchMaker.shutil.copyfile
 
     def fail_on_z(src, dst):
         if src == 'z.txt':
             raise PermissionError(13, 'Permission denied', src)
-        return copy2(src, dst)
+        return copyfile(src, dst)
 
-    monkeypatch.setattr(PatchMaker.shutil, 'copy2', fail_on_z)
+    monkeypatch.setattr(PatchMaker.shutil, 'copyfile', fail_on_z)
 
     try:
         assert PatchMaker.PatchMaker().run(['ro', 'z.txt']) == 1
@@ -573,3 +573,20 @@ def test_run_skips_links_into_git_inside_directory(workdir, capsys):
     assert not (workdir / 'test_patch/d/gl').exists()
     assert not (workdir / 'test_patch/d/cfg').exists()
     assert '2 entries above were skipped' in capsys.readouterr().out
+
+
+@pytest.mark.skipif(not hasattr(os, 'chflags') or not hasattr(stat, 'UF_IMMUTABLE'), reason='no file flags')
+def test_run_copies_locked_file_without_flags(workdir):
+    write(workdir / 'locked.txt', 'x')
+    try:
+        os.chflags(workdir / 'locked.txt', stat.UF_IMMUTABLE)
+    except OSError:
+        pytest.skip('file system rejects flags')
+    try:
+        assert PatchMaker.PatchMaker().run(['locked.txt']) == 0
+        assert (workdir / 'test_patch/locked.txt').read_text() == 'x'
+        assert not os.stat(workdir / 'test_patch/locked.txt').st_flags & stat.UF_IMMUTABLE
+    finally:
+        os.chflags(workdir / 'locked.txt', 0)
+        if (workdir / 'test_patch/locked.txt').exists():
+            os.chflags(workdir / 'test_patch/locked.txt', 0)

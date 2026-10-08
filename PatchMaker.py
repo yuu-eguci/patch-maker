@@ -131,9 +131,11 @@ class PatchMaker:
         return donelist
 
     def copy_file(self, src: str, dst: str) -> str:
-        """更新日時を保ってコピーし、 setuid / setgid / sticky ビットを落とします。"""
-        copied = shutil.copy2(src, dst)
-        os.chmod(copied, stat.S_IMODE(os.stat(copied).st_mode) & 0o777)
+        """内容、権限、更新日時をコピーします。 setuid などの特殊ビットとファイルフラグはコピーしません。"""
+        copied = shutil.copyfile(src, dst)
+        st = os.stat(src)
+        os.chmod(copied, stat.S_IMODE(st.st_mode) & 0o777)
+        os.utime(copied, ns=(st.st_atime_ns, st.st_mtime_ns))
         return copied
 
     def retry_with_write_permission(self, func, path, _):

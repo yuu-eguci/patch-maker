@@ -53,9 +53,11 @@ Iona Kest 作業記録
 - [x] バッチ 27: `.dockerignore` を許可リスト方式にし、 `.env` などがイメージに入る問題を解消 (`.env` を置いたコピーでビルドして確認) 。 Docker 実行は `PatchMaker.py` のあるディレクトリで行う旨を README に追記
 - [x] バッチ 28: 開発用依存を `requirements-dev.in` と pip-compile のハッシュ付きロックに分け、 `--require-hashes` でインストール。 actions をコミット SHA で固定し、 checkout に `persist-credentials: false` を指定 (3.13 と 3.14 でロックのインストールを確認)
 - [x] バッチ 29: リンク経由で `.git` の中身がコピーされる回避 (`gl -> .git` など) と、 Windows で `.git` と同じ名前になる `.git.` などを拒否・除外
+- [x] バッチ 30: macOS のロック (`uchg`) 付きファイルでコピーにもロックが付き失敗する退行 (バッチ 25 の `copy2` 由来) を解消。 `copyfile` と権限・更新日時の個別コピーに変更 (macOS の Python 3.14 で失敗と修正を確認)
 
 ## 残課題
 
+- ファイルフラグのテストは macOS などフラグに対応した環境でだけ動きます (`/opt/homebrew/bin/python3.14` の venv で確認) 。
 - 読み取り専用のコピーを削除するテストは root 以外で実行したときだけ動きます。 Docker では `--user 1000:1000 -e HOME=/tmp` を付けて `pytest -p no:cacheprovider` で確認しています。
 - 大文字と小文字の区別に関するテストは、区別するファイルシステム (Linux の CI など) ではスキップされます。 macOS では `--basetemp` に macOS のディレクトリを指定し、 Docker からマウントして確認しています。
 - Docker のベースイメージはダイジェストで固定しています。セキュリティ更新を取り込むときは、ダイジェストを手動で更新します。
