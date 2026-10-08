@@ -53,13 +53,24 @@ class PatchMaker:
 
     def create_patch(self, pathlist: list) -> list:
         """目的であるパッチの作成。"""
-        os.mkdir(PATCHNAME)
+        self.patchdir = self.make_patch_dir()
         donelist = []
         for path in self.select_copy_targets(pathlist):
-            dest = os.path.join(PATCHNAME, path)
+            dest = os.path.join(self.patchdir, path)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             donelist.append(shutil.copytree(path, dest) if os.path.isdir(path) else shutil.copy(path, dest))
         return donelist
+
+    def make_patch_dir(self) -> str:
+        """パッチディレクトリを作成して名前を返します。同名のディレクトリがあれば連番を付けます。"""
+        patchdir, number = PATCHNAME, 1
+        while True:
+            try:
+                os.mkdir(patchdir)
+                return patchdir
+            except FileExistsError:
+                number += 1
+                patchdir = f'{PATCHNAME}_{number}'
 
     def select_copy_targets(self, pathlist: list) -> list:
         """重複と、コピー対象ディレクトリの配下にあるパスを除き、辞書順に並べます。"""
@@ -77,6 +88,7 @@ class PatchMaker:
         pprint(absentpaths)
         print(f'<INFO> {len(absentpaths)} files above were not found and were ignored.')
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
+        print(f'<INFO> Patch directory: {self.patchdir}')
 
 
 def main(argv: list | None = None):

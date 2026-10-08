@@ -3,4 +3,5 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *_patch/
+*_patch_[0-9]*/
 project/

@@ -194,3 +194,23 @@ def test_main_reads_paths_from_stdin_with_dash(workdir, no_cd, monkeypatch):
 
     assert (workdir / 'test_patch/a.txt').read_text() == 'a'
     assert (workdir / 'test_patch/d/b.txt').read_text() == 'b'
+
+
+def test_create_patch_adds_suffix_when_patch_directory_exists(workdir):
+    write(workdir / 'a.txt', 'new')
+    write(workdir / 'test_patch/a.txt', 'old')
+    write(workdir / 'test_patch_2/a.txt', 'old')
+
+    donelist = PatchMaker.PatchMaker().create_patch(['a.txt'])
+
+    assert donelist == [os.path.join('test_patch_3', 'a.txt')]
+    assert (workdir / 'test_patch/a.txt').read_text() == 'old'
+    assert (workdir / 'test_patch_3/a.txt').read_text() == 'new'
+
+
+def test_run_prints_patch_directory_name(workdir, capsys):
+    write(workdir / 'a.txt')
+
+    PatchMaker.PatchMaker().run(['a.txt'])
+
+    assert '<INFO> Patch directory: test_patch' in capsys.readouterr().out
