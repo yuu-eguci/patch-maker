@@ -184,7 +184,11 @@ def main(argv: list | None = None) -> int:
     if argv in (['-h'], ['--help']):
         print(USAGE)
         return 0
-    paths = sys.stdin.read() if argv == ['-'] else argv or targetpaths
+    if argv == ['-']:
+        # OS の文字コード設定 (Windows の cp932 など) によらず UTF-8 として読み、 BOM を除きます。
+        paths = sys.stdin.buffer.read().decode('utf-8-sig', errors='surrogateescape')
+    else:
+        paths = argv or targetpaths
     pm = PatchMaker()
     pm.cd_()
     return pm.run(paths)

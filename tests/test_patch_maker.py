@@ -160,6 +160,11 @@ def test_run_reports_duplicated_missing_path_once(workdir, capsys):
     assert '1 files above were not found' in capsys.readouterr().out
 
 
+def fake_stdin(monkeypatch, data: bytes, encoding='cp932'):
+    """OS の文字コードが UTF-8 以外の環境を想定した標準入力に差し替えます。"""
+    monkeypatch.setattr('sys.stdin', io.TextIOWrapper(io.BytesIO(data), encoding=encoding))
+
+
 @pytest.fixture
 def no_cd(monkeypatch):
     """main() がスクリプトのディレクトリへ移動しないようにします。"""
@@ -188,7 +193,7 @@ def test_main_uses_command_line_arguments(workdir, no_cd):
 def test_main_reads_paths_from_stdin_with_dash(workdir, no_cd, monkeypatch):
     write(workdir / 'a.txt', 'a')
     write(workdir / 'd/b.txt', 'b')
-    monkeypatch.setattr('sys.stdin', io.StringIO('a.txt\r\nd/b.txt\r\n'))
+    fake_stdin(monkeypatch, b'a.txt\r\nd/b.txt\r\n')
 
     PatchMaker.main(['-'])
 
@@ -227,7 +232,7 @@ def test_main_fails_without_creating_patch_when_nothing_to_copy(workdir, no_cd, 
 
 
 def test_main_fails_with_empty_stdin(workdir, no_cd, monkeypatch):
-    monkeypatch.setattr('sys.stdin', io.StringIO(''))
+    fake_stdin(monkeypatch, b'')
 
     assert PatchMaker.main(['-']) == 1
     assert not (workdir / 'test_patch').exists()
@@ -341,7 +346,7 @@ def test_make_pathlist_keeps_lines_that_are_not_git_quoted(line):
 
 def test_main_copies_git_quoted_path_from_stdin(workdir, no_cd, monkeypatch):
     write(workdir / 'd/日.txt', 'jp')
-    monkeypatch.setattr('sys.stdin', io.StringIO('"d/\\346\\227\\245.txt"\n'))
+    fake_stdin(monkeypatch, b'"d/\\346\\227\\245.txt"\n')
 
     assert PatchMaker.main(['-']) == 0
     assert (workdir / 'test_patch/d/日.txt').read_text() == 'jp'
@@ -470,3 +475,27 @@ def test_retry_with_write_permission_does_not_chmod_outside_patch(workdir):
     pm.retry_with_write_permission(lambda path: None, 'test_patch', None)
 
     assert workdir.stat().st_mode & 0o777 == 0o755
+
+
+def test_main_reads_stdin_as_utf8_with_bom(workdir, no_cd, monkeypatch):
+    write(workdir / 'a.txt', 'a')
+    write(workdir / 'd/日本.txt', 'jp')
+    fake_stdin(monkeypatch, '\ufeffa.txt\nd/日本.txt\n'.encode())
+
+    assert PatchMaker.main(['-']) == 0
+
+    assert (workdir / 'test_patch/a.txt').read_text() == 'a'
+    assert (workdir / 'test_patch/d/日本.txt').read_text() == 'jp'
+
+
+def test_main_reads_non_utf8_stdin_without_crashing(workdir, no_cd, monkeypatch):
+    name = os.fsdecode(b'\x93\xfa.txt')
+    try:
+        write(workdir / name, 'sjis')
+    except (OSError, UnicodeEncodeError):
+        pytest.skip('file system rejects non UTF-8 names')
+    fake_stdin(monkeypatch, b'\x93\xfa.txt\n')
+
+    assert PatchMaker.main(['-']) == 0
+
+    assert (workdir / 'test_patch' / name).read_text() == 'sjis'

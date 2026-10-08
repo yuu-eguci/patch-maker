@@ -46,6 +46,7 @@ Iona Kest 作業記録
 - 設計役の claude-fable-5-1 は今回も HTTP 429 (追加クレジットが必要) で使えないため、設計は opus で行います。
 - 使用量の残り割合は、このセッションから参照する手段がありません。
 - [x] バッチ 22: README に「すぐ試す」節を追加 (新しい clone で実行し、出力を確認済み)
+- [x] バッチ 23: 標準入力を UTF-8 (BOM 除去、不正バイトは surrogateescape) で読む。 Windows の cp932 環境と BOM 付きリストで見つからない扱いになる問題を解消し、 README の `core.quotePath=false` 指定を削除
 
 ## 残課題
 
