@@ -51,7 +51,12 @@ class PatchMaker:
         if not copypaths:
             print('<ERROR> No files to copy. The patch directory was not created.', file=sys.stderr)
             return 1
-        self.output_result(self.create_patch(copypaths))
+        try:
+            donelist = self.create_patch(copypaths)
+        except OSError as error:
+            print(f'<ERROR> Copy failed. The patch directory was not created: {error}', file=sys.stderr)
+            return 1
+        self.output_result(donelist)
         return 0
 
     def make_pathlist(self, targetpaths: str | list) -> list:
@@ -86,15 +91,19 @@ class PatchMaker:
         self.patchdir = self.make_patch_dir()
         self.skippedlinks = []
         donelist = []
-        for path in self.select_copy_targets(pathlist):
-            self.visited = set()
-            dest = os.path.join(self.patchdir, path)
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
-            donelist.append(
-                shutil.copytree(path, dest, ignore=self.ignore_unsafe_links)
-                if os.path.isdir(path)
-                else shutil.copy(path, dest)
-            )
+        try:
+            for path in self.select_copy_targets(pathlist):
+                self.visited = set()
+                dest = os.path.join(self.patchdir, path)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                donelist.append(
+                    shutil.copytree(path, dest, ignore=self.ignore_unsafe_links)
+                    if os.path.isdir(path)
+                    else shutil.copy(path, dest)
+                )
+        except OSError:
+            shutil.rmtree(self.patchdir, ignore_errors=True)
+            raise
         return donelist
 
     def ignore_unsafe_links(self, src: str, names: list) -> list:

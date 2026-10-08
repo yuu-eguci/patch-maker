@@ -382,3 +382,23 @@ def test_main_prints_usage_with_help_option(workdir, no_cd, capsys, option):
 
     assert 'Usage:' in capsys.readouterr().out
     assert not (workdir / 'test_patch').exists()
+
+
+def test_run_removes_partial_patch_when_copy_fails(workdir, capsys, monkeypatch):
+    write(workdir / 'a.txt')
+    write(workdir / 'b.txt')
+    copy = PatchMaker.shutil.copy
+
+    def fail_on_b(src, dst):
+        if src == 'b.txt':
+            raise PermissionError(13, 'Permission denied', src)
+        return copy(src, dst)
+
+    monkeypatch.setattr(PatchMaker.shutil, 'copy', fail_on_b)
+
+    assert PatchMaker.PatchMaker().run(['a.txt', 'b.txt']) == 1
+
+    assert not (workdir / 'test_patch').exists()
+    captured = capsys.readouterr()
+    assert 'Copy failed' in captured.err
+    assert 'Succeeded' not in captured.out
