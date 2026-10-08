@@ -57,9 +57,11 @@ Iona Kest 作業記録
 - [x] バッチ 31: CI の Docker ジョブで README の「すぐ試す」手順を実行し、パッチの中身と所有者を確認
 - [x] バッチ 32: Dependabot で Docker のベースイメージ、 actions 、 pip のロックを毎週更新提案 (設定ファイルの追加のみ。 push していないため未稼働)
 - [x] バッチ 33: ディレクトリにも copytree 経由でファイルフラグと特殊ビットがコピーされる問題を解消。後片付けの再削除でもフラグを外す (Docker の root / root 以外、 macOS の Python 3.14 で確認)
+- [x] バッチ 34: ロックを uv の `--universal` で生成し直し、 Windows だけで使う colorama のハッシュを含める (Linux の 3.13 / 3.14 と macOS の 3.14 でインストールを確認)
 
 ## 残課題
 
+- ロックの Windows でのインストールは実機で未確認です。 Dependabot の pip 更新が uv 生成のロックを正しく再生成できるかも、 push していないため未確認です。
 - バッチ 31 の所有者確認 (`stat -c %u`) は Linux ランナー向けです。 macOS の Docker Desktop ではマウント越しの所有者が実際と異なって見えるため、ローカルでは中身の確認だけ行っています。 push していないため GitHub 上では未実行です。
 - ファイルフラグのテストは macOS などフラグに対応した環境でだけ動きます (`/opt/homebrew/bin/python3.14` の venv で確認) 。
 - 読み取り専用のコピーを削除するテストは root 以外で実行したときだけ動きます。 Docker では `--user 1000:1000 -e HOME=/tmp` を付けて `pytest -p no:cacheprovider` で確認しています。

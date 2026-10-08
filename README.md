@@ -117,7 +117,7 @@ docker run --rm patch-maker sh -c 'ruff check . && ruff format --check . && pyte
 
 依存とイメージは次のように固定しています。
 
-- `requirements-dev.in` に直接使うライブラリを書き、 `requirements-dev.txt` に間接依存を含むバージョンとハッシュを pip-compile で生成しています。 `requirements-dev.in` を変えたら `pip-compile --generate-hashes --strip-extras --output-file requirements-dev.txt requirements-dev.in` で再生成します。
+- `requirements-dev.in` に直接使うライブラリを書き、 `requirements-dev.txt` に間接依存 (Windows だけで使う colorama を含みます) のバージョンとハッシュを uv で生成しています。 `requirements-dev.in` を変えたら `uv pip compile --universal --generate-hashes --python-version 3.13 requirements-dev.in -o requirements-dev.txt` で再生成します。
 - Docker のベースイメージは `Dockerfile` のダイジェストで、 GitHub Actions の actions はコミット SHA で固定しています。
 - 固定した依存、ベースイメージ、 actions の更新は Dependabot (`.github/dependabot.yml`) が毎週 PR で提案します。
 
