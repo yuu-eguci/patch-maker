@@ -79,7 +79,14 @@ class PatchMaker:
         print(f'<INFO> Succeeded! {len(donelist)} patch files were created. They are not shown on console.')
 
 
-if __name__ == '__main__':
+def main(argv: list | None = None):
+    """引数があれば引数を、 `-` だけなら標準入力を、なければ冒頭の targetpaths を対象にします。"""
+    argv = sys.argv[1:] if argv is None else argv
+    paths = sys.stdin.read() if argv == ['-'] else argv or targetpaths
     pm = PatchMaker()
     pm.cd_()
-    pm.run(targetpaths)
+    pm.run(paths)
+
+
+if __name__ == '__main__':
+    main()

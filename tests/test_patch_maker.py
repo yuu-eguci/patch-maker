@@ -1,5 +1,6 @@
 """PatchMaker の特性テストです。"""
 
+import io
 import ntpath
 import os
 from pathlib import PureWindowsPath
@@ -157,3 +158,39 @@ def test_run_reports_duplicated_missing_path_once(workdir, capsys):
     PatchMaker.PatchMaker().run(['missing.txt', 'missing.txt'])
 
     assert '1 files above were not found' in capsys.readouterr().out
+
+
+@pytest.fixture
+def no_cd(monkeypatch):
+    """main() がスクリプトのディレクトリへ移動しないようにします。"""
+    monkeypatch.setattr(PatchMaker.PatchMaker, 'cd_', lambda self: None)
+
+
+def test_main_uses_targetpaths_without_arguments(workdir, no_cd, monkeypatch):
+    write(workdir / 'a.txt', 'a')
+    monkeypatch.setattr(PatchMaker, 'targetpaths', '\na.txt\n')
+
+    PatchMaker.main([])
+
+    assert (workdir / 'test_patch/a.txt').read_text() == 'a'
+
+
+def test_main_uses_command_line_arguments(workdir, no_cd):
+    write(workdir / 'a.txt', 'a')
+    write(workdir / 'b.txt', 'b')
+
+    PatchMaker.main(['a.txt'])
+
+    assert (workdir / 'test_patch/a.txt').exists()
+    assert not (workdir / 'test_patch/b.txt').exists()
+
+
+def test_main_reads_paths_from_stdin_with_dash(workdir, no_cd, monkeypatch):
+    write(workdir / 'a.txt', 'a')
+    write(workdir / 'd/b.txt', 'b')
+    monkeypatch.setattr('sys.stdin', io.StringIO('a.txt\r\nd/b.txt\r\n'))
+
+    PatchMaker.main(['-'])
+
+    assert (workdir / 'test_patch/a.txt').read_text() == 'a'
+    assert (workdir / 'test_patch/d/b.txt').read_text() == 'b'
