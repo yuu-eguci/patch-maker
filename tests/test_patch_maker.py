@@ -542,3 +542,9 @@ def test_run_drops_special_permission_bits(workdir, target):
     assert PatchMaker.PatchMaker().run([target]) == 0
 
     assert stat.S_IMODE((workdir / 'test_patch/d/f').stat().st_mode) == 0o755
+
+
+def test_run_rejects_path_with_nul_character(workdir, capsys):
+    assert PatchMaker.PatchMaker().run(['a\x00b']) == 1
+
+    assert '1 paths above were rejected' in capsys.readouterr().out

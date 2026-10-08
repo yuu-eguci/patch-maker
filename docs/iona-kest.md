@@ -49,6 +49,7 @@ Iona Kest 作業記録
 - [x] バッチ 23: 標準入力を UTF-8 (BOM 除去、不正バイトは surrogateescape) で読む。 Windows の cp932 環境と BOM 付きリストで見つからない扱いになる問題を解消し、 README の `core.quotePath=false` 指定を削除
 - [x] バッチ 24: `.git` を含むパスを拒否し、コピーするディレクトリ内の `.git` (サブモジュールを含む) を除外。 git 管理外のファイルもコピーされる点を README で注意喚起
 - [x] バッチ 25: コピーしたファイルの setuid / setgid / sticky ビットを落とす (root 実行で root 所有の setuid ファイルができる問題) 。ファイルコピーを `copy_file` に統一し、更新日時を保持
+- [x] バッチ 26: NUL 文字を含むパスで traceback になる問題を解消 (拒否して一覧表示)
 
 ## 残課題
 

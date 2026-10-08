@@ -82,10 +82,11 @@ class PatchMaker:
             return line
 
     def is_unsafe_path(self, path: str) -> bool:
-        """ルートやドライブ付き、 .git を含む、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""
+        """NUL 文字や .git を含む、ルート付き、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""
         normalized = PurePath(os.path.normpath(path))
         return (
-            bool(normalized.anchor)
+            '\0' in path
+            or bool(normalized.anchor)
             or normalized.parts[:1] in ((), ('..',))
             or any(part.casefold() == '.git' for part in normalized.parts)
             or not self.is_inside_base(os.path.normpath(path))
@@ -178,7 +179,7 @@ class PatchMaker:
         """コピーしなかったパスの出力。"""
         if rejectedpaths:
             pprint(rejectedpaths)
-            print(f'<INFO> {len(rejectedpaths)} paths above were rejected (rooted, .git or outside this directory).')
+            print(f'<INFO> {len(rejectedpaths)} paths above were rejected (NUL, rooted, .git or outside this dir).')
         pprint(absentpaths)
         print(f'<INFO> {len(absentpaths)} files above were not found and were ignored.')
 
