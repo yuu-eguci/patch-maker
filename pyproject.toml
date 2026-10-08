@@ -1,0 +1,29 @@
+[project]
+name = "patch-maker"
+version = "0.1.0"
+description = "選択したファイルをタイムスタンプ付きのパッチディレクトリへコピーするツールです。"
+requires-python = ">=3.13"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.per-file-ignores]
+# 利用者が冒頭の targetpaths を書き換える使い方のため、 import より前に置いています。
+"PatchMaker.py" = ["E402"]
