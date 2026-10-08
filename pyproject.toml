@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+filterwarnings = ["error"]
 
 [tool.ruff]
 line-length = 120

@@ -10,12 +10,16 @@ project/html/html2.html
 
 """
 
+import ast
 import datetime
 import os
+import re
 import shutil
 import sys
 from pathlib import PurePath
 from pprint import pprint
+
+GIT_QUOTED_PATH = re.compile(r'"(?:[^"\\\x00-\x1f\x7f-\U0010ffff]|\\[abtnvfr"\\]|\\[0-3][0-7]{2})*"')
 
 PATCHNAME = datetime.datetime.today().strftime('%Y%m%d_%H%M%S') + '_patch'
 
@@ -45,7 +49,16 @@ class PatchMaker:
     def make_pathlist(self, targetpaths: str | list) -> list:
         """文字列またはリストで渡されたパスから、前後の空白と空行と重複を除いた配列を作ります。"""
         lines = targetpaths.splitlines() if isinstance(targetpaths, str) else targetpaths
-        return list(dict.fromkeys(line.strip() for line in lines if line.strip()))
+        return list(dict.fromkeys(self.unquote_git_path(line.strip()) for line in lines if line.strip()))
+
+    def unquote_git_path(self, line: str) -> str:
+        """git が "d/\\346..." の形式で出力したパスを元のファイル名へ戻します。それ以外の行はそのまま返します。"""
+        if not GIT_QUOTED_PATH.fullmatch(line):
+            return line
+        try:
+            return ast.literal_eval('b' + line).decode()
+        except UnicodeDecodeError:
+            return line
 
     def is_unsafe_path(self, path: str) -> bool:
         """ルートやドライブ付きのパスと、ディレクトリ全体またはその外を指すパス (リンクは実体) を判定します。"""

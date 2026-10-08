@@ -325,3 +325,23 @@ def test_run_copies_directory_reached_by_several_links_once(appdir, capsys):
     copied = list((appdir / 'test_patch').rglob('f.txt'))
     assert len(copied) == 1
     assert '16 symlinks above were skipped' in capsys.readouterr().out
+
+
+def test_make_pathlist_decodes_git_quoted_paths():
+    pm = PatchMaker.PatchMaker()
+    lines = '"d/\\346\\227\\245.txt"\n"tab\\there.txt"\n"say \\"hi\\".txt"\n'
+
+    assert pm.make_pathlist(lines) == ['d/日.txt', 'tab\there.txt', 'say "hi".txt']
+
+
+@pytest.mark.parametrize('line', ['"unterminated', '"\\q"', '"\\777"', '"日.txt"', 'plain.txt'])
+def test_make_pathlist_keeps_lines_that_are_not_git_quoted(line):
+    assert PatchMaker.PatchMaker().make_pathlist([line]) == [line]
+
+
+def test_main_copies_git_quoted_path_from_stdin(workdir, no_cd, monkeypatch):
+    write(workdir / 'd/日.txt', 'jp')
+    monkeypatch.setattr('sys.stdin', io.StringIO('"d/\\346\\227\\245.txt"\n'))
+
+    assert PatchMaker.main(['-']) == 0
+    assert (workdir / 'test_patch/d/日.txt').read_text() == 'jp'
